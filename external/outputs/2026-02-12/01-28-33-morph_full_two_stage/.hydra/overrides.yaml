@@ -1,0 +1,9 @@
+- +experiment=morphology_normal_24g
+- dataset=morphology
+- dataset.datadir=/data2/kfchen/tracing_ws/morphology_seg/synthesis_data
+- general.name=morph_full_two_stage
+- general.gpus=1
+- general.wandb=disabled
+- train.n_epochs=50
+- train.batch_size=1
+- train.save_model=True

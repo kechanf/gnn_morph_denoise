@@ -42,6 +42,9 @@ SYNTHESIS_NUM_SAMPLES = 2000
 SYNTHESIS_NUM_INTERFER_RANGE = (5, 10)
 # 合并近距节点的距离阈值（单位：与坐标同尺度，通常是 μm）
 MERGE_DIST_THRESHOLD = 1.0
+# 单个样本合成超时（秒）：若单次 generate_dataset 超过此时间未返回，则跳过该样本并继续下一个
+# 设为 None 或 0 表示不设超时
+SYNTHESIS_SAMPLE_TIMEOUT_SEC = 120
 
 # ---------- 各合成/噪声策略的参数 ----------
 
@@ -93,7 +96,7 @@ BREAK_FRAGMENT_CFG = {
 # mixed 策略控制
 MIXED_CFG = {
     # 对于一个样本，最少注入多少次“噪声操作”（一次操作 = 选择一个策略并应用）
-    "min_injections": 10,
+    "min_injections": 20,
 }
 
 # ---------- 新连接几何约束（角度） ----------
@@ -133,12 +136,55 @@ BREAK_FRAGMENT_SAMPLE_NUM_SEED_SWCS = 10  # 作为碎片 seed 的 SWC 数
 # ---------- Step 3 & 4: 训练与测试（数据路径） ----------
 # 训练使用的 .pt 图目录（通常就是合成输出目录）
 TRAIN_DATA_DIR = os.path.join(DATA_ROOT, "synthesis_data")
+# 仅含 50 个样本的小数据集目录（用于快速验证训练流程，由 scripts/create_tiny_dataset.py 生成）
+TRAIN_DATA_DIR_TINY_50 = os.path.join(DATA_ROOT, "synthesis_data_tiny_50")
 # 测试/验证使用的 .pt 图目录（可与训练目录不同，用于 cross-dataset 实验）
 TEST_DATA_DIR = os.path.join(DATA_ROOT, "synthesis_data")
 # 训练得到的最佳模型保存路径（仅保存 state_dict）
 MODEL_SAVE_PATH = os.path.join(DATA_ROOT, "best_model.pth")
 # 推理阶段导出的 SWC 结果目录（input / pred / gt）
 TEST_OUTPUT_DIR = os.path.join(DATA_ROOT, "results_swc")
+# Graph-Mamba 训练输出目录（结果、checkpoint、日志等，统一在 DATA_ROOT 下）
+GRAPH_MAMBA_OUT_DIR = os.path.join(DATA_ROOT, "graph_mamba_results")
+
+# =========================
+# Graph-Mamba 超参实验预设（用于 scripts/run_graph_mamba_experiments.py）
+# =========================
+# 每项: name_tag 唯一标识（会作为 out_dir 子目录名）;
+#       overrides: 覆盖 YAML 的键值对，键为 cfg 路径如 "gnn.dropout"、"optim.base_lr"。
+# 分组：学习率 | Dropout | 隐藏维 | 层数 | 权重衰减 | batch_size | LapPE 维度
+GRAPH_MAMBA_EXPERIMENT_PRESETS = [
+    # ----- Baseline（与当前 YAML 一致） -----
+    {"name_tag": "baseline", "overrides": {}},
+    # ----- 1. 学习率 -----
+    {"name_tag": "lr_5e-4", "overrides": {"optim.base_lr": 0.0005}},
+    {"name_tag": "lr_2e-3", "overrides": {"optim.base_lr": 0.002}},
+    {"name_tag": "lr_3e-3", "overrides": {"optim.base_lr": 0.003}},
+    # ----- 2. Dropout -----
+    {"name_tag": "drop_0.1", "overrides": {"gnn.dropout": 0.1}},
+    {"name_tag": "drop_0.2", "overrides": {"gnn.dropout": 0.2}},
+    {"name_tag": "drop_0.3", "overrides": {"gnn.dropout": 0.3}},
+    {"name_tag": "drop_0.5", "overrides": {"gnn.dropout": 0.5}},
+    # ----- 3. 隐藏维度 (dim_inner) -----
+    {"name_tag": "dim_64", "overrides": {"gnn.dim_inner": 64}},
+    {"name_tag": "dim_128", "overrides": {"gnn.dim_inner": 128}},
+    {"name_tag": "dim_192", "overrides": {"gnn.dim_inner": 192}},
+    # ----- 4. GNN 层数 -----
+    {"name_tag": "layers_2", "overrides": {"gnn.layers_mp": 2}},
+    {"name_tag": "layers_3", "overrides": {"gnn.layers_mp": 3}},
+    {"name_tag": "layers_6", "overrides": {"gnn.layers_mp": 6}},
+    # ----- 5. 权重衰减 -----
+    {"name_tag": "wd_0", "overrides": {"optim.weight_decay": 0.0}},
+    {"name_tag": "wd_0.001", "overrides": {"optim.weight_decay": 0.001}},
+    {"name_tag": "wd_0.05", "overrides": {"optim.weight_decay": 0.05}},
+    # ----- 6. Batch size -----
+    {"name_tag": "bs_16", "overrides": {"train.batch_size": 16}},
+    {"name_tag": "bs_64", "overrides": {"train.batch_size": 64}},
+    # ----- 7. LapPE 维度 -----
+    {"name_tag": "pe_dim_8", "overrides": {"posenc_LapPE.dim_pe": 8}},
+    {"name_tag": "pe_dim_32", "overrides": {"posenc_LapPE.dim_pe": 32}},
+]
+
 # 测试时最多处理多少个 .pt 文件：
 # - None: 全部
 # - 整数: 只取前 N 个，便于快速调试
@@ -170,3 +216,40 @@ SAVE_BEST_BASED_ON = "test"
 # 在测试阶段，从预测掩码重建树结构时使用的 KNN 中的 k：
 # - k 越大，MST 的连通性越强，但可能引入不自然的远距离连接
 MST_K_NEIGHBORS = 15
+
+# =========================
+# 对照实验预设 (EXPERIMENT_PRESETS)
+# =========================
+# 供 scripts/run_experiments.py 批量跑实验；Graph-Mamba 超参实验见 run_graph_mamba_experiments.py。每项会覆盖上面的模型/训练超参，
+# 并可将最佳模型保存到 DATA_ROOT/checkpoints/{run_name}.pth。
+#
+# 字段说明：
+#   run_name      : 唯一标识，用于保存模型和日志
+#   model_type    : "gcn" | "gat" | "sage" | "gin"
+#   num_layers    : GNN 卷积层数 (1~4)
+#   hidden_channels : 隐藏维度
+#   dropout       : Dropout 比例
+#   learning_rate : 可选，不写则用上面 LEARNING_RATE
+#
+# 分组：深度 | 宽度 | Dropout | 架构 | 学习率
+
+EXPERIMENT_PRESETS = [
+    # ----- 1. 深度对照 (Depth)：固定 H64 D0.5，只改层数 -----
+    {"run_name": "gcn_L1_H64_D0.5", "model_type": "gcn", "num_layers": 1, "hidden_channels": 64, "dropout": 0.5},
+    {"run_name": "gcn_L2_H64_D0.5", "model_type": "gcn", "num_layers": 2, "hidden_channels": 64, "dropout": 0.5},  # Baseline
+    {"run_name": "gcn_L3_H64_D0.5", "model_type": "gcn", "num_layers": 3, "hidden_channels": 64, "dropout": 0.5},
+    {"run_name": "gcn_L4_H64_D0.5", "model_type": "gcn", "num_layers": 4, "hidden_channels": 64, "dropout": 0.5},
+    # ----- 2. 宽度对照 (Width)：固定 2 层 D0.5，只改 hidden -----
+    {"run_name": "gcn_L2_H32_D0.5", "model_type": "gcn", "num_layers": 2, "hidden_channels": 32, "dropout": 0.5},
+    {"run_name": "gcn_L2_H128_D0.5", "model_type": "gcn", "num_layers": 2, "hidden_channels": 128, "dropout": 0.5},
+    # ----- 3. Dropout 对照 (Regularization)：固定 2 层 H64 -----
+    {"run_name": "gcn_L2_H64_D0.0", "model_type": "gcn", "num_layers": 2, "hidden_channels": 64, "dropout": 0.0},
+    {"run_name": "gcn_L2_H64_D0.3", "model_type": "gcn", "num_layers": 2, "hidden_channels": 64, "dropout": 0.3},
+    # ----- 4. 架构对照 (Arch)：2 层 H64 D0.5，GCN / GAT / SAGE / GIN -----
+    {"run_name": "gat_L2_H64_D0.5", "model_type": "gat", "num_layers": 2, "hidden_channels": 64, "dropout": 0.5},
+    {"run_name": "sage_L2_H64_D0.5", "model_type": "sage", "num_layers": 2, "hidden_channels": 64, "dropout": 0.5},
+    {"run_name": "gin_L2_H64_D0.5", "model_type": "gin", "num_layers": 2, "hidden_channels": 64, "dropout": 0.5},
+    # ----- 5. 学习率对照 (LR)：固定 GCN 2 层 H64 D0.5 -----
+    {"run_name": "gcn_L2_H64_D0.5_LR5e-4", "model_type": "gcn", "num_layers": 2, "hidden_channels": 64, "dropout": 0.5, "learning_rate": 0.0005},
+    {"run_name": "gcn_L2_H64_D0.5_LR2e-3", "model_type": "gcn", "num_layers": 2, "hidden_channels": 64, "dropout": 0.5, "learning_rate": 0.002},
+]

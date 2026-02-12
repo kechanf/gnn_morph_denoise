@@ -880,7 +880,9 @@ def convert_to_gnn_data(
     y_labels = []
     for node_id in nodes_list:
         node_data = target_G.nodes[node_id]
-        r = node_data.get("r", 1.0)
+        r = float(node_data.get("r", 1.0))
+        if not np.isfinite(r) or r <= 0:
+            r = 1.0
         if node_id == target_root_id:
             node_type = 1.0
         elif node_id in inter_root_set:
@@ -889,6 +891,11 @@ def convert_to_gnn_data(
             node_type = 0.0
         dist = path_distances.get(node_id, -1.0)
         angle = angle_features.get(node_id, 0.0)
+        # 测地距离对不可达节点可能为 inf，会导致训练 NaN；统一用 -1 表示无效
+        if not np.isfinite(dist):
+            dist = -1.0
+        if not np.isfinite(angle):
+            angle = 0.0
         x_features.append([r, node_type, dist, angle])
         y_labels.append(1 if node_id in origin_set else 0)
 
