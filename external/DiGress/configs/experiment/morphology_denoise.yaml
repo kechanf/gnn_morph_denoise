@@ -1,0 +1,8 @@
+# @package _global_
+# 形态学去噪实验：基于 debug 配置，batch_size 固定为 2
+defaults:
+  - debug
+general:
+  name: 'morph_denoise'
+train:
+  batch_size: 2

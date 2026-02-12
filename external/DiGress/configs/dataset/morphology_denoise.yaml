@@ -1,0 +1,7 @@
+name: morphology_denoise
+
+# 成对去噪数据集：datadir 指向原始 .pt 所在目录（与 morphology 一样）
+datadir: /data2/kfchen/tracing_ws/morphology_seg/synthesis_data
+
+pin_memory: false
+
