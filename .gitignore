@@ -24,13 +24,10 @@ dist/
 *.swo
 
 # --- 本项目生成的数据 / 结果（不进 Git） ---
-# 合成的图数据（训练 .pt）
 /data2/
 synthesis_data/
 */synthesis_data/
 *.pt
-
-# SWC 可视化与导出结果
 sample_visualization/
 break_fragment_samples/
 mixed_swc_samples/
@@ -39,8 +36,5 @@ results_swc/
 */break_fragment_samples/
 */mixed_swc_samples/
 */results_swc/
-
-# 其他可能的大文件目录（按需补充）
 checkpoints/
 */checkpoints/
-

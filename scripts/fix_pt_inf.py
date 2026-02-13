@@ -17,11 +17,41 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PROJECT_ROOT)
 
 
+# 兼容旧版本保存的 DataEdgeAttr / DataTensorAttr（曾在 torch_geometric.data.data 中定义），
+# 否则在 PyTorch>=2.6 + 新版 PyG 下，torch.load 旧 .pt 时会因为类缺失而报错，
+# 出现类似 "Can't get attribute 'DataEdgeAttr' on torch_geometric.data.data"。
+def _register_legacy_pyg_attr_stubs():
+    try:
+        from torch_geometric.data import Data
+        import torch_geometric.data.data as _pyg_data_mod
+
+        if not hasattr(_pyg_data_mod, "DataEdgeAttr"):
+            class DataEdgeAttr(Data):  # type: ignore[misc]
+                """Backward-compatible stub for legacy pickles."""
+                pass
+
+            _pyg_data_mod.DataEdgeAttr = DataEdgeAttr  # type: ignore[attr-defined]
+
+        if not hasattr(_pyg_data_mod, "DataTensorAttr"):
+            class DataTensorAttr(Data):  # type: ignore[misc]
+                """Backward-compatible stub for legacy pickles."""
+                pass
+
+            _pyg_data_mod.DataTensorAttr = DataTensorAttr  # type: ignore[attr-defined]
+    except Exception:
+        # 若导入失败，不影响正常路径；仅在加载旧 pickle 时才需要。
+        pass
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--data_dir", type=str, default=None)
     parser.add_argument("--dry_run", action="store_true", help="只统计不写回")
     args = parser.parse_args()
+
+    # 在开始加载任何 .pt 之前先注册兼容 stub，避免 torch.load 旧文件时报错。
+    _register_legacy_pyg_attr_stubs()
+
     import config
     data_dir = os.path.abspath(args.data_dir or config.TRAIN_DATA_DIR)
     pt_files = sorted(glob.glob(os.path.join(data_dir, "*.pt")))
