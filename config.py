@@ -147,6 +147,18 @@ TEST_OUTPUT_DIR = os.path.join(DATA_ROOT, "results_swc")
 # Graph-Mamba 训练输出目录（结果、checkpoint、日志等，统一在 DATA_ROOT 下）
 GRAPH_MAMBA_OUT_DIR = os.path.join(DATA_ROOT, "graph_mamba_results")
 
+# ---------- Graph-Mamba 最终 baseline（固定为 s5_combo_all 调参结果） ----------
+# 用于复现、推理和后续分支对比。对应 run 目录：morphology-node-GatedGCN-only-s5_combo_all
+GRAPH_MAMBA_FINAL_BASELINE = "s5_combo_all"
+GRAPH_MAMBA_FINAL_BASELINE_OVERRIDES = {
+    "gnn.layers_mp": 20,
+    "gnn.dim_inner": 192,
+    "gnn.dropout": 0.15,
+    "optim.base_lr": 0.0025,
+    "optim.weight_decay": 0.02,
+    "train.batch_size": 16,
+}
+
 # =========================
 # Graph-Mamba 超参实验预设（用于 scripts/run_graph_mamba_experiments.py）
 # =========================

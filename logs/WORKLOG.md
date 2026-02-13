@@ -25,3 +25,7 @@
 - **第四阶段调参结果**：完成 `s4` 全部 10 组实验并输出 `graph_mamba_experiments_stage4.csv`。单项最优结果为：`s4_wd_0_02` 取得最高 `val_acc=0.87154`，`s4_drop_0_15` 取得最高 `val_auc=0.94991`。
 - **组合验证实验编排（第五阶段）**：基于第四阶段最优方向新增 `s5_combo_*` 四组组合预设（`wd=0.02`、`dropout=0.15`、`lr=0.0025` 的两两/三项组合），并启动批量实验，结果文件目标为 `graph_mamba_experiments_stage5_combo.csv`。
 - **实验脚本持续维护**：`scripts/run_graph_mamba_experiments.py` 已按阶段化方式扩展（`s3` 深度扫描、`s4` 单项调参、`s5` 组合验证），支持通过 `--presets` 精确选择实验组并统一写入指定 CSV。
+
+## 2026-02-13
+
+- **Graph-Mamba 最终 baseline 固定**：将第五阶段组合验证最优配置 **s5_combo_all**（val_acc 0.87121）定为最终 baseline。在 `config.py` 中新增 `GRAPH_MAMBA_FINAL_BASELINE` 与 `GRAPH_MAMBA_FINAL_BASELINE_OVERRIDES`；在 `run_graph_mamba_experiments.py` 中新增 `final_baseline` preset（与 s5_combo_all 同参），便于复现与分支对比。

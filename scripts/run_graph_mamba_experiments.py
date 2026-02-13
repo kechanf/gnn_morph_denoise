@@ -476,6 +476,18 @@ GRAPH_MAMBA_EXPERIMENT_PRESETS = [
             "train.batch_size": 16,
         },
     },
+    # ================= 最终 baseline（与 s5_combo_all 一致，供 --presets final_baseline） =================
+    {
+        "name_tag": "final_baseline",
+        "overrides": {
+            "gnn.layers_mp": 20,
+            "gnn.dim_inner": 192,
+            "gnn.dropout": 0.15,
+            "optim.base_lr": 0.0025,
+            "optim.weight_decay": 0.02,
+            "train.batch_size": 16,
+        },
+    },
 ]
 
 
