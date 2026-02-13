@@ -12,6 +12,30 @@ import torch.nn.functional as F
 from torch_geometric.data import Data, InMemoryDataset
 from tqdm import tqdm
 
+# 兼容旧版本保存的 DataEdgeAttr（曾在 torch_geometric.data.data 中定义），
+# 新版 PyG 中该类可能不存在，导致 pickle 反序列化失败。这里将其别名为 Data。
+try:
+    import torch_geometric.data.data as _pyg_data_mod
+
+    # 旧版本中额外定义过 DataEdgeAttr / DataTensorAttr 等辅助类，
+    # 新版移除后，旧 pickle 会在反序列化时报找不到类，这里统一别名到 Data。
+    if not hasattr(_pyg_data_mod, "DataEdgeAttr"):
+        class DataEdgeAttr(Data):
+            """Backward-compatible stub for legacy pickles."""
+            pass
+
+        _pyg_data_mod.DataEdgeAttr = DataEdgeAttr
+
+    if not hasattr(_pyg_data_mod, "DataTensorAttr"):
+        class DataTensorAttr(Data):
+            """Backward-compatible stub for legacy pickles."""
+            pass
+
+        _pyg_data_mod.DataTensorAttr = DataTensorAttr
+except Exception:
+    # 若导入失败，不影响后续正常路径；仅在加载旧 pickle 时才需要。
+    pass
+
 
 def _standardize(tensor):
     mask = tensor >= 0
@@ -50,7 +74,10 @@ class MorphologyNodeDataset(InMemoryDataset):
     def __init__(self, root, transform=None, pre_transform=None):
         self.pt_dir = root  # directory containing *.pt files
         super().__init__(root, transform, pre_transform)
-        self.data, self.slices = torch.load(self.processed_paths[0])
+        # PyTorch>=2.6 默认 weights_only=True，会阻止包含自定义类（如
+        # torch_geometric.data.Data）的对象被反序列化。这里文件由本项目生成且
+        # 来源可信，显式关闭 weights_only 以兼容旧版本 processed 缓存。
+        self.data, self.slices = torch.load(self.processed_paths[0], weights_only=False)
         self._data = self.data  # GraphGym set_dataset_info expects _data
         self.name = 'morphology-node'
 
@@ -64,7 +91,9 @@ class MorphologyNodeDataset(InMemoryDataset):
             raise FileNotFoundError(f"No *.pt files in {self.pt_dir}")
         data_list = []
         for path in tqdm(pt_files, desc='Morphology'):
-            data = torch.load(path)
+            # 同理，原始 *.pt 也是由本项目生成的 torch_geometric.data.Data 对象，
+            # 显式设置 weights_only=False 以避免 PyTorch>=2.6 的安全限制。
+            data = torch.load(path, weights_only=False)
             data = _preprocess_features(data)
             if not hasattr(data, 'num_nodes'):
                 data.num_nodes = data.x.size(0)

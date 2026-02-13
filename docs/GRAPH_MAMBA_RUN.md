@@ -18,6 +18,10 @@
    - `configs/Mamba/morphology-node-GatedGCN-only.yaml`：仅 GatedGCN + LapPE，**不需 mamba-ssm**。
    - `scripts/run_graph_mamba.py`：`--no-mamba` 使用 GatedGCN-only 配置；依赖缺失时会提示安装。
 
+4. **减配与补全（相对完整 Graph-Mamba）**
+   - **GatedGCN-only** 相对 EX 的减配：无 Mamba/gt、`custom_gnn`、`edge_encoder: False`、`node_encoder_bn: False`。
+   - **已在 EX 中补上**：`morphology-node-EX.yaml` 现启用 `node_encoder_bn: True`、`edge_encoder: True`、`edge_encoder_name: LinearEdge`、`edge_encoder_bn: True`；`graphgps/encoder/linear_edge_encoder.py` 已支持 `morphology-node` 的 6 维边特征。用 EX 且不传 `--no-mamba` 即使用完整模型 + 上述编码器。
+
 ## 环境（已用 medsam 环境跑通）
 
 在 **medsam** 环境中已安装并验证可用的包：

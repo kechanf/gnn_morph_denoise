@@ -19,6 +19,7 @@ except ModuleNotFoundError:
 
 from torch_geometric.utils import degree, sort_edge_index
 from typing import List
+import heapq
 
 import numpy as np
 import torch
@@ -114,6 +115,145 @@ def permute_within_batch(batch):
 
     return permuted_indices
 
+
+def tree_order_within_batch(edge_index, batch, order='bfs', root_choice='min_degree'):
+    """Heuristic scan order for tree-like graphs: BFS or DFS from a chosen root.
+
+    Assumes each connected component in the batch is (or is treated as) a tree.
+    For non-tree graphs, BFS/DFS still gives a well-defined order from the chosen root.
+
+    Args:
+        edge_index: (2, E) global node indices
+        batch: (N,) batch index per node
+        order: 'bfs' (level-order) or 'dfs' (pre-order, parent before children)
+        root_choice: 'min_degree' (leaf as root), 'max_degree', or 'first' (first node in graph)
+
+    Returns:
+        permuted_indices: (N,) global node indices in tree order, grouped by batch.
+    """
+    device = batch.device
+    num_nodes = batch.size(0)
+    unique_batches = torch.unique(batch, sorted=True)
+    permuted_indices = []
+
+    for b in unique_batches:
+        mask_b = (batch == b)
+        nodes_b = mask_b.nonzero(as_tuple=False).squeeze(-1)  # global indices, (n_b,)
+        n_b = nodes_b.size(0)
+        if n_b == 0:
+            continue
+        global_to_local = torch.full((num_nodes,), -1, dtype=torch.long, device=device)
+        global_to_local[nodes_b] = torch.arange(n_b, device=device)
+
+        # edges with both endpoints in this graph
+        row, col = edge_index[0], edge_index[1]
+        in_b = mask_b[row] & mask_b[col]
+        row_b, col_b = row[in_b], col[in_b]
+        local_src = global_to_local[row_b]
+        local_dst = global_to_local[col_b]
+
+        # build undirected adj list (local indices)
+        adj = [[] for _ in range(n_b)]
+        for i in range(local_src.size(0)):
+            u, v = local_src[i].item(), local_dst[i].item()
+            if u != v:
+                adj[u].append(v)
+                adj[v].append(u)
+
+        # choose root (local index)
+        if root_choice == 'first':
+            root = 0
+        else:
+            deg = torch.tensor([len(adj[i]) for i in range(n_b)], device=device, dtype=torch.long)
+            if root_choice == 'min_degree':
+                root = deg.argmin().item()
+            else:  # max_degree
+                root = deg.argmax().item()
+
+        # BFS or DFS to get order (local indices)
+        visited = [False] * n_b
+        order_local = []
+        stack_or_queue = [root]
+        visited[root] = True
+        while stack_or_queue:
+            u = stack_or_queue.pop(0) if order == 'bfs' else stack_or_queue.pop()
+            order_local.append(u)
+            for v in adj[u]:
+                if not visited[v]:
+                    visited[v] = True
+                    stack_or_queue.append(v)
+
+        # map back to global indices, keep same batch order
+        perm_b = nodes_b[torch.tensor(order_local, device=device)]
+        permuted_indices.append(perm_b)
+
+    return torch.cat(permuted_indices) if permuted_indices else torch.arange(num_nodes, device=device)
+
+
+def gnn_priority_bfs_within_batch(edge_index, batch, scores):
+    """GNN-guided priority serialization: BFS that always expands the highest-score node next.
+
+    Root per graph = argmax(scores) in that graph (most "tree-like" node).
+    Frontier is a max-heap by score so we visit high-s_i nodes first, pushing noise to the end.
+
+    Args:
+        edge_index: (2, E) global node indices
+        batch: (N,) batch index per node
+        scores: (N,) tree likelihood in [0, 1], e.g. from sigmoid(MLP(H_GNN))
+
+    Returns:
+        permuted_indices: (N,) global node indices in priority-BFS order, grouped by batch.
+    """
+    device = batch.device
+    num_nodes = batch.size(0)
+    unique_batches = torch.unique(batch, sorted=True)
+    permuted_indices = []
+
+    for b in unique_batches:
+        mask_b = (batch == b)
+        nodes_b = mask_b.nonzero(as_tuple=False).squeeze(-1)  # global indices, (n_b,)
+        n_b = nodes_b.size(0)
+        if n_b == 0:
+            continue
+        global_to_local = torch.full((num_nodes,), -1, dtype=torch.long, device=device)
+        global_to_local[nodes_b] = torch.arange(n_b, device=device)
+        scores_b = scores[nodes_b]  # (n_b,)
+
+        # edges with both endpoints in this graph
+        row, col = edge_index[0], edge_index[1]
+        in_b = mask_b[row] & mask_b[col]
+        row_b, col_b = row[in_b], col[in_b]
+        local_src = global_to_local[row_b]
+        local_dst = global_to_local[col_b]
+
+        adj = [[] for _ in range(n_b)]
+        for i in range(local_src.size(0)):
+            u, v = local_src[i].item(), local_dst[i].item()
+            if u != v:
+                adj[u].append(v)
+                adj[v].append(u)
+
+        # root = argmax score (most tree-like)
+        root = scores_b.argmax().item()
+        # max-heap via negative score: (-score, local_idx)
+        visited = [False] * n_b
+        order_local = []
+        heap = [(-float(scores_b[root].item()), root)]
+        visited[root] = True
+        while heap:
+            _, u = heapq.heappop(heap)
+            order_local.append(u)
+            for v in adj[u]:
+                if not visited[v]:
+                    visited[v] = True
+                    heapq.heappush(heap, (-float(scores_b[v].item()), v))
+
+        perm_b = nodes_b[torch.tensor(order_local, device=device)]
+        permuted_indices.append(perm_b)
+
+    return torch.cat(permuted_indices) if permuted_indices else torch.arange(num_nodes, device=device)
+
+
 class GPSLayer(nn.Module):
     """Local MPNN + full graph attention x-former layer.
     """
@@ -201,7 +341,16 @@ class GPSLayer(nn.Module):
                     "mamba_ssm is required for Mamba layers. Install with: pip install mamba-ssm "
                     "or use a GatedGCN-only config (e.g. run_graph_mamba.py --no-mamba)."
                 )
-            if global_model_type.split('_')[-1] == '2':
+            if global_model_type == 'Mamba_GNNPriorityBFS':
+                # GNN-guided priority serialization: MLP predicts tree likelihood, priority BFS orders nodes
+                self.self_attn = Mamba(d_model=dim_h, d_state=16, d_conv=4, expand=1)
+                self.gnn_priority_mlp = nn.Sequential(
+                    nn.Linear(dim_h, dim_h),
+                    nn.ReLU(),
+                    nn.Dropout(dropout),
+                    nn.Linear(dim_h, 1),
+                )
+            elif global_model_type.split('_')[-1] == '2':
                 self.self_attn = Mamba(d_model=dim_h, # Model dimension d_model
                         d_state=8,  # SSM state expansion factor
                         d_conv=4,    # Local convolution width
@@ -332,6 +481,44 @@ class GPSLayer(nn.Module):
                 deg = degree(batch.edge_index[0], batch.x.shape[0]).to(torch.long)
                 # indcies that sort by batch and then deg, by ascending order
                 h_ind_perm = lexsort([deg, batch.batch])
+                h_dense, mask = to_dense_batch(h[h_ind_perm], batch.batch[h_ind_perm])
+                h_ind_perm_reverse = torch.argsort(h_ind_perm)
+                h_attn = self.self_attn(h_dense)[mask][h_ind_perm_reverse]
+
+            elif self.global_model_type == 'Mamba_TreeBFS':
+                # Tree heuristic: BFS (level-order) from root; root = min_degree (leaf)
+                h_ind_perm = tree_order_within_batch(
+                    batch.edge_index, batch.batch, order='bfs', root_choice='min_degree'
+                )
+                h_dense, mask = to_dense_batch(h[h_ind_perm], batch.batch[h_ind_perm])
+                h_ind_perm_reverse = torch.argsort(h_ind_perm)
+                h_attn = self.self_attn(h_dense)[mask][h_ind_perm_reverse]
+
+            elif self.global_model_type == 'Mamba_TreeDFS':
+                # Tree heuristic: DFS (pre-order) from root; root = min_degree (leaf)
+                h_ind_perm = tree_order_within_batch(
+                    batch.edge_index, batch.batch, order='dfs', root_choice='min_degree'
+                )
+                h_dense, mask = to_dense_batch(h[h_ind_perm], batch.batch[h_ind_perm])
+                h_ind_perm_reverse = torch.argsort(h_ind_perm)
+                h_attn = self.self_attn(h_dense)[mask][h_ind_perm_reverse]
+
+            elif self.global_model_type == 'Mamba_TreeBFS_Soma':
+                # Tree heuristic: BFS from root = max_degree (soma-like for morphology)
+                h_ind_perm = tree_order_within_batch(
+                    batch.edge_index, batch.batch, order='bfs', root_choice='max_degree'
+                )
+                h_dense, mask = to_dense_batch(h[h_ind_perm], batch.batch[h_ind_perm])
+                h_ind_perm_reverse = torch.argsort(h_ind_perm)
+                h_attn = self.self_attn(h_dense)[mask][h_ind_perm_reverse]
+
+            elif self.global_model_type == 'Mamba_GNNPriorityBFS':
+                # GNN-guided priority serialization: s_i = sigmoid(MLP(h_local)), then priority BFS
+                h_local = h_out_list[0] if h_out_list else h
+                scores_i = torch.sigmoid(self.gnn_priority_mlp(h_local).squeeze(-1))
+                h_ind_perm = gnn_priority_bfs_within_batch(
+                    batch.edge_index, batch.batch, scores_i
+                )
                 h_dense, mask = to_dense_batch(h[h_ind_perm], batch.batch[h_ind_perm])
                 h_ind_perm_reverse = torch.argsort(h_ind_perm)
                 h_attn = self.self_attn(h_dense)[mask][h_ind_perm_reverse]
@@ -738,7 +925,6 @@ class GPSLayer(nn.Module):
             h_out_list.append(h_attn)
 
         # Combine local and global outputs.
-        # h = torch.cat(h_out_list, dim=-1)
         h = sum(h_out_list)
 
         # Feed Forward block.

@@ -19,9 +19,10 @@ dataset:
   split_mode: standard
   node_encoder: True
   node_encoder_name: LinearNode
-  node_encoder_bn: False
-  edge_encoder: False
-  edge_encoder_bn: False
+  node_encoder_bn: True
+  edge_encoder: True
+  edge_encoder_name: LinearEdge
+  edge_encoder_bn: True
 posenc_LapPE:
   enable: True
   eigen:
