@@ -86,6 +86,7 @@ def _add_gnn_priority_aux_loss(loss, batch):
     loss_aux = F.binary_cross_entropy(scores, labels, reduction='mean')
     return loss + aux_weight * loss_aux
 
+
 # @profiler.profile
 # def profile_mem_forward(model, batch):
 #     pred, true = model(batch)

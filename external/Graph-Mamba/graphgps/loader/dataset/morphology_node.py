@@ -4,6 +4,7 @@ Each .pt is a PyG Data with x (Radius, Type, Dist, Angle), y (node labels 0/1), 
 Preprocessing: [Radius, Type, Dist, Angle] -> 6-dim (radius_norm, type_one_hot(3), dist_norm, angle_norm).
 额外字段 dist_from_root, is_target_root 供 Mamba_GNNPriorityBFS 显式使用。
 若新增此字段后首次运行，需删除 processed 缓存（morphology_processed.pt）以触发重新处理。
+Used by gnn_project with Graph-Mamba as baseline.
 """
 import glob
 import os.path as osp

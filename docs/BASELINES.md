@@ -100,3 +100,4 @@ python scripts/run_graph_mamba.py \
   - GPS 层（GatedGCN + Mamba）：`external/Graph-Mamba/graphgps/layer/gps_layer.py` → `GPSLayer`（内用 `GatedGCNLayer` 与 `mamba_ssm.Mamba`，Mamba 可选 try/except）。
 - **数据**：`external/Graph-Mamba/graphgps/loader/dataset/morphology_node.py`（MorphologyNode），loader 在 `graphgps/loader/master_loader.py`。
 - **Baseline 常量**：项目根 `config.py` 中 `GRAPH_MAMBA_BASELINE_10_10_*`、`GRAPH_MAMBA_BASELINE_20_ALIGNED_*`。
+
