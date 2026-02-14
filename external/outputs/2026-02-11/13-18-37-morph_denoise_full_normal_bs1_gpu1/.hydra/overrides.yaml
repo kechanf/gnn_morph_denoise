@@ -1,0 +1,9 @@
+- +experiment=moses
+- dataset=morphology_denoise
+- dataset.datadir=/data2/kfchen/tracing_ws/morphology_seg/synthesis_data
+- general.name=morph_denoise_full_normal_bs1_gpu1
+- general.gpus=1
+- general.wandb=disabled
+- general.check_val_every_n_epochs=1
+- train.n_epochs=3
+- train.batch_size=1

@@ -1,0 +1,61 @@
+# 形态学节点分类：仅 GatedGCN（不依赖 mamba-ssm），便于在未安装 Mamba 时先跑通训练。
+# 用法: python scripts/run_graph_mamba.py --cfg configs/Mamba/morphology-node-GatedGCN-only.yaml
+out_dir: results
+metric_best: accuracy
+wandb:
+  use: False
+  project: morphology-gnn
+  entity: project
+dataset:
+  format: PyG-MorphologyNode
+  name: morphology-node
+  dir: /data2/kfchen/tracing_ws/morphology_seg/synthesis_data
+  task: graph
+  task_type: classification
+  transductive: False
+  split: [0.8, 0.1, 0.1]
+  split_mode: standard
+  node_encoder: True
+  node_encoder_name: LinearNode
+  node_encoder_bn: False
+  edge_encoder: False
+  edge_encoder_bn: False
+posenc_LapPE:
+  enable: True
+  eigen:
+    laplacian_norm: none
+    eigvec_norm: L2
+    max_freqs: 10
+  model: DeepSet
+  dim_pe: 16
+  layers: 2
+  raw_norm_type: none
+train:
+  mode: custom
+  batch_size: 32
+  eval_period: 1
+  ckpt_period: 50
+model:
+  type: custom_gnn
+  loss_fun: cross_entropy
+  graph_pooling: mean
+gnn:
+  head: inductive_node
+  layers_pre_mp: 1
+  layers_post_mp: 1
+  layers_mp: 4
+  dim_inner: 96
+  layer_type: gatedgcnconv
+  batchnorm: True
+  act: relu
+  dropout: 0.0
+  residual: True
+optim:
+  clip_grad_norm: True
+  optimizer: adamW
+  weight_decay: 0.01
+  base_lr: 0.001
+  max_epoch: 200
+  scheduler: cosine_with_warmup
+  num_warmup_epochs: 10
+seed: 42

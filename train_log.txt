@@ -1,0 +1,23 @@
+Found 1933 graph files.
+Epoch 000 -> Best model saved (acc: 0.9453)
+Epoch 000, Loss: 0.1805, Train: 0.9501, Test: 0.9453
+Epoch 001 -> Best model saved (acc: 0.9456)
+Epoch 004 -> Best model saved (acc: 0.9458)
+Epoch 005 -> Best model saved (acc: 0.9462)
+Epoch 008 -> Best model saved (acc: 0.9463)
+Epoch 010, Loss: 0.1257, Train: 0.9511, Test: 0.9457
+Epoch 011 -> Best model saved (acc: 0.9466)
+Epoch 012 -> Best model saved (acc: 0.9466)
+Epoch 014 -> Best model saved (acc: 0.9467)
+Epoch 020 -> Best model saved (acc: 0.9468)
+Epoch 020, Loss: 0.1250, Train: 0.9513, Test: 0.9468
+Epoch 025 -> Best model saved (acc: 0.9468)
+Epoch 030, Loss: 0.1236, Train: 0.9518, Test: 0.9467
+Epoch 032 -> Best model saved (acc: 0.9468)
+Epoch 035 -> Best model saved (acc: 0.9469)
+Epoch 038 -> Best model saved (acc: 0.9470)
+Epoch 040, Loss: 0.1237, Train: 0.9518, Test: 0.9464
+Epoch 042 -> Best model saved (acc: 0.9470)
+Epoch 050, Loss: 0.1227, Train: 0.9520, Test: 0.9468
+Training finished. Best model: /data2/kfchen/tracing_ws/morphology_seg/best_model.pth (acc: 0.9470)
+

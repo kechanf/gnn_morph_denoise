@@ -1,0 +1,38 @@
+# @package _global_
+# 形态学专用：缩小版「正常」模型，适配 24GB 显存（batch_size=1）
+# 相比 moses(16.4M) 大幅缩小，比 debug(212K) 更大，保留多 finetune 能力
+general:
+  name: 'morph_normal_24g'
+  gpus: 1
+  wandb: 'disabled'
+  remove_h: True
+  check_val_every_n_epochs: 5
+  sample_every_val: 2
+  samples_to_generate: 8
+  samples_to_save: 2
+  chains_to_save: 1
+  log_every_steps: 50
+  final_model_samples_to_generate: 100
+  final_model_samples_to_save: 10
+  final_model_chains_to_save: 2
+
+train:
+  optimizer: adamw
+  n_epochs: 50
+  batch_size: 1
+  save_model: True
+  lr: 2e-4
+  num_workers: 0
+
+model:
+  n_layers: 5
+  lambda_train: [5, 0]
+  type: 'discrete'
+  transition: 'marginal'
+  model: 'graph_tf'
+  diffusion_steps: 200
+  diffusion_noise_schedule: 'cosine'
+  extra_features: 'all'
+  hidden_mlp_dims: {'X': 64, 'E': 32, 'y': 64}
+  # dx % n_head == 0
+  hidden_dims: {'dx': 64, 'de': 32, 'dy': 64, 'n_head': 4, 'dim_ffX': 64, 'dim_ffE': 32, 'dim_ffy': 64}

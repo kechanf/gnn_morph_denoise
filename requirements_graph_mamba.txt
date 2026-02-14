@@ -1,0 +1,16 @@
+# Graph-Mamba 运行所需依赖（在已有 PyTorch + CUDA 环境下 pip 安装）
+# 建议先: conda create -n graph_mamba python=3.9 -y && conda activate graph_mamba
+# 再: pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
+# 然后: pip install -r requirements_graph_mamba.txt
+torch-geometric>=2.0.0
+ogb
+pyyaml
+yacs
+tensorboardx
+tqdm
+numpy
+scipy
+scikit-learn
+# Mamba-SSM（需与 CUDA 匹配，若安装失败见 https://github.com/state-spaces/mamba）
+# pip install mamba-ssm
+# 若无法安装 mamba-ssm，可先注释 external/Graph-Mamba 中 Mamba 相关层，仅用 GatedGCN 做基线

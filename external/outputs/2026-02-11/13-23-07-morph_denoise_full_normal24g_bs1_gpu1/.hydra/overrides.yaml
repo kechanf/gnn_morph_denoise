@@ -1,0 +1,6 @@
+- +experiment=morphology_normal_24g
+- dataset=morphology_denoise
+- dataset.datadir=/data2/kfchen/tracing_ws/morphology_seg/synthesis_data
+- general.name=morph_denoise_full_normal24g_bs1_gpu1
+- general.gpus=1
+- general.wandb=disabled

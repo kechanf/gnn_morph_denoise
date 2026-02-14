@@ -1,0 +1,10 @@
+- +experiment=debug
+- dataset.datadir=/data2/kfchen/tracing_ws/morphology_seg/synthesis_data
+- general.name=node_cls_morphology_full_two_stage_minimal_v2
+- general.gpus=1
+- train.batch_size=1
+- train.n_epochs=20
+- +train.cls_threshold=0.5
+- +train.freeze_encoder_epochs=3
+- +train.pos_weight=1.7693408586453918
+- +model.encoder_ckpt=/home/kfchen/gnn_project/external/DiGress/checkpoints/morph_full_two_stage/last.ckpt

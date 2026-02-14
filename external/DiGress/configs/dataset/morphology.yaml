@@ -1,0 +1,9 @@
+name: morphology
+
+# 形态学图数据所在目录：
+# 建议直接填绝对路径，例如：
+#   /data2/kfchen/tracing_ws/morphology_seg/synthesis_data
+datadir: /data2/kfchen/tracing_ws/morphology_seg/synthesis_data
+
+pin_memory: false
+

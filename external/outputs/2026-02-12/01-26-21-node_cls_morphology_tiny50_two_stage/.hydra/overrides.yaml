@@ -1,0 +1,7 @@
+- +experiment=debug
+- dataset.datadir=/data2/kfchen/tracing_ws/morphology_seg/synthesis_data_tiny_50
+- general.name=node_cls_morphology_tiny50_two_stage
+- general.gpus=1
+- train.batch_size=2
+- train.n_epochs=10
+- +model.encoder_ckpt=/home/kfchen/gnn_project/external/DiGress/checkpoints/morph_tiny50_two_stage/last.ckpt
