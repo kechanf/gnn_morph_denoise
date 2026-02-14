@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# 数据与结果（按需取消注释）
+# *.pt
+# graph_mamba_results/
+# synthesis_data/
+# synthesis_data_tiny_50/
+
+# 环境与 IDE
+.venv/
+venv/
+.env
+.idea/
+.vscode/
+*.swp
+*~
+
+# 日志与临时
+*.log
+.DS_Store

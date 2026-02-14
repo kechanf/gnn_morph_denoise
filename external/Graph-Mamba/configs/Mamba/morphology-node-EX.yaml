@@ -1,0 +1,76 @@
+# Graph-Mamba baseline for morphology node classification (gnn_project)
+# Usage: from gnn_project root, run:  python scripts/run_graph_mamba.py
+# Or:  cd external/Graph-Mamba && python main.py --cfg configs/Mamba/morphology-node-EX.yaml dataset.dir /path/to/synthesis_data wandb.use False
+
+out_dir: results
+metric_best: accuracy
+wandb:
+  use: False
+  project: morphology-gnn
+  entity: project
+dataset:
+  format: PyG-MorphologyNode
+  name: morphology-node
+  dir: /data2/kfchen/tracing_ws/morphology_seg/synthesis_data  # override via CLI or run_graph_mamba.py
+  task: graph
+  task_type: classification
+  transductive: False
+  split: [0.8, 0.1, 0.1]
+  split_mode: standard
+  node_encoder: True
+  node_encoder_name: LinearNode
+  node_encoder_bn: True
+  edge_encoder: True
+  edge_encoder_name: LinearEdge
+  edge_encoder_bn: True
+posenc_LapPE:
+  enable: True
+  eigen:
+    laplacian_norm: none
+    eigvec_norm: L2
+    max_freqs: 10
+  model: DeepSet
+  dim_pe: 16
+  layers: 2
+  raw_norm_type: none
+train:
+  mode: custom
+  batch_size: 32
+  eval_period: 1
+  ckpt_period: 50
+model:
+  type: GPSModel
+  loss_fun: cross_entropy
+  graph_pooling: mean
+gt:
+  layer_type: CustomGatedGCN+Mamba_Hybrid_Degree_Noise
+  n_heads: 4
+  dim_hidden: 96
+  dropout: 0.0
+  attn_dropout: 0.5
+  layer_norm: False
+  batch_norm: True
+  # 融合方式: sum (默认) | conflict_aware (逐维门控)。override 时可写 gt.fusion conflict_aware
+  fusion: sum
+  fusion_beta: 1.0
+  # Mamba_GNNPriorityBFS 时辅助 BCE 监督 scores，使 MLP 学会树/噪声打分。默认 0.5
+  gnn_priority_aux_weight: 0.5
+  # dist 的正弦编码维度，用于 MLP 输入增强。默认 16
+  gnn_priority_pe_dim: 16
+gnn:
+  head: inductive_node
+  layers_pre_mp: 1
+  layers_post_mp: 1
+  dim_inner: 96
+  batchnorm: True
+  act: relu
+  dropout: 0.0
+optim:
+  clip_grad_norm: True
+  optimizer: adamW
+  weight_decay: 0.01
+  base_lr: 0.001
+  max_epoch: 200
+  scheduler: cosine_with_warmup
+  num_warmup_epochs: 10
+seed: 42
