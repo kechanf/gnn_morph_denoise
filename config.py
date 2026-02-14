@@ -147,8 +147,23 @@ TEST_OUTPUT_DIR = os.path.join(DATA_ROOT, "results_swc")
 # Graph-Mamba 训练输出目录（结果、checkpoint、日志等，统一在 DATA_ROOT 下）
 GRAPH_MAMBA_OUT_DIR = os.path.join(DATA_ROOT, "graph_mamba_results")
 
-# ---------- Graph-Mamba 最终 baseline（固定为 s5_combo_all 调参结果） ----------
-# 用于复现、推理和后续分支对比。对应 run 目录：morphology-node-GatedGCN-only-s5_combo_all
+# ---------- Graph-Mamba 两种统一 baseline（对比实验固定） ----------
+# 训练/优化超参一致，仅结构不同。详见 docs/BASELINES.md。
+# Baseline A：10+10（EX，10 层 GatedGCN+Mamba）
+GRAPH_MAMBA_BASELINE_10_10_NAME = "baseline_10_10"
+GRAPH_MAMBA_BASELINE_10_10_OVERRIDES = {"gt.layers": 10}  # 使用 morphology-node-EX.yaml，不传 --no-mamba
+# Baseline B：20 层纯 GatedGCN（对齐 A 的超参）
+GRAPH_MAMBA_BASELINE_20_ALIGNED_NAME = "baseline_20_aligned"
+GRAPH_MAMBA_BASELINE_20_ALIGNED_OVERRIDES = {
+    "gnn.layers_mp": 20,
+    "gnn.dim_inner": 96,
+    "gnn.dropout": 0.0,
+    "optim.base_lr": 0.001,
+    "optim.weight_decay": 0.01,
+    "train.batch_size": 32,
+}  # 使用 morphology-node-GatedGCN-only.yaml，--no-mamba
+
+# ---------- 旧版：s5_combo_all（20 层 + 单独调参，非对齐 baseline） ----------
 GRAPH_MAMBA_FINAL_BASELINE = "s5_combo_all"
 GRAPH_MAMBA_FINAL_BASELINE_OVERRIDES = {
     "gnn.layers_mp": 20,
