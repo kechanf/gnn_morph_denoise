@@ -25,31 +25,46 @@ export GNN_DATA_ROOT=/path/to/data_root
 python scripts/run_graph_mamba.py \
   --data_dir /path/to/synthesis_data \
   --wandb False \
-  --name_tag baseline_10_10 \
-  --repeat 1 \
-  --override gt.layers 10
+  --baseline 10_10
 ```
 
-## Baseline B：20 层纯 GatedGCN（对齐版）
+或手动：`--override gt.layers 10 --name_tag baseline_10_10`
 
-- **结构**：20 层 GatedGCN，无 Mamba。
-- **配置**：`morphology-node-GatedGCN-only.yaml`，override 层数与上述统一超参。
-- **依赖**：无需 mamba-ssm（`--no-mamba`）。
+## BFS 改进：10+10 + Mamba_GNNPriorityBFS（与 A 参数一致）
+
+- **结构**：同 Baseline A（10 层 GPSLayer），但 Mamba 换为 GNN 引导的 Priority BFS 排序（`Mamba_GNNPriorityBFS`）。
+- **参数**：与 10+10 完全一致（batch 32, dim 96, dropout 0, lr 0.001, wd 0.01, 200 epoch）。
+- **配置**：`morphology-node-EX.yaml`，override `gt.layer_type` 与 `gt.layers`。
 
 ```bash
 export GNN_DATA_ROOT=/path/to/data_root
 python scripts/run_graph_mamba.py \
   --data_dir /path/to/synthesis_data \
   --wandb False \
-  --name_tag baseline_20_aligned \
-  --repeat 1 \
-  --no-mamba \
-  --override gnn.layers_mp 20 \
-  --override gnn.dim_inner 96 \
-  --override gnn.dropout 0.0 \
-  --override optim.base_lr 0.001 \
-  --override optim.weight_decay 0.01 \
-  --override train.batch_size 32
+  --baseline bfs
+```
+
+或手动指定：
+
+```bash
+python scripts/run_graph_mamba.py --data_dir /path/to/synthesis_data \
+  --override gt.layer_type "CustomGatedGCN+Mamba_GNNPriorityBFS" \
+  --override gt.layers 10 \
+  --name_tag baseline_10_10_gnn_priority_bfs
+```
+
+## Baseline B：20 层纯 GatedGCN（对齐版）
+
+- **结构**：20 层 GatedGCN，无 Mamba。
+- **配置**：`morphology-node-GatedGCN-only.yaml`，override 层数与上述统一超参。
+- **依赖**：无需 mamba-ssm（`--baseline 20_aligned` 会自动加 `--no-mamba`）。
+
+```bash
+export GNN_DATA_ROOT=/path/to/data_root
+python scripts/run_graph_mamba.py \
+  --data_dir /path/to/synthesis_data \
+  --wandb False \
+  --baseline 20_aligned
 ```
 
 ## 参考结果（全量 2000 图，200 epoch）
@@ -59,7 +74,7 @@ python scripts/run_graph_mamba.py \
 | A (10+10) | 43 | 88.21% | 88.14% |
 | B (20 层对齐) | 40 | 85.87% | 84.73% |
 
-详见 `config.py` 中 `GRAPH_MAMBA_BASELINE_*` 常量。
+详见 `config.py` 中 `GRAPH_MAMBA_BASELINE_*` 常量。`--baseline bfs` 对应 `GRAPH_MAMBA_BASELINE_BFS_*`。
 
 ### 可选：门控融合（Conflict-Aware Gating）
 
@@ -83,8 +98,9 @@ python scripts/run_graph_mamba.py \
 
 | 名称 | 结构 | 配置 YAML | 入口行为 |
 |------|------|------------|----------|
-| **Baseline A（10+10）** | 10 层 GPSLayer，每层 = 1×GatedGCN + 1×Mamba | `morphology-node-EX.yaml`，override `gt.layers=10` | `scripts/run_graph_mamba.py`，不传 `--no-mamba`，需 mamba-ssm |
-| **Baseline B（20 层对齐）** | 20 层纯 GatedGCN，无 Mamba | `morphology-node-GatedGCN-only.yaml`，override 层数及统一超参 | `scripts/run_graph_mamba.py --no-mamba`，无需 mamba-ssm |
+| **Baseline A（10+10）** | 10 层 GPSLayer，每层 = 1×GatedGCN + 1×Mamba | `morphology-node-EX.yaml`，override `gt.layers=10` | `--baseline 10_10`，需 mamba-ssm |
+| **BFS 改进** | 同 A，Mamba 换为 Mamba_GNNPriorityBFS | 同 A，override `gt.layer_type` + `gt.layers=10` | `--baseline bfs`，需 mamba-ssm |
+| **Baseline B（20 层对齐）** | 20 层纯 GatedGCN，无 Mamba | `morphology-node-GatedGCN-only.yaml`，override 层数及统一超参 | `--baseline 20_aligned`，自动 `--no-mamba` |
 
 两者训练超参一致：batch 32，dim_inner 96，dropout 0，lr 0.001，weight_decay 0.01，200 epoch。
 

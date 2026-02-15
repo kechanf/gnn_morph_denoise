@@ -152,6 +152,13 @@ GRAPH_MAMBA_OUT_DIR = os.path.join(DATA_ROOT, "graph_mamba_results")
 # Baseline A：10+10（EX，10 层 GatedGCN+Mamba）
 GRAPH_MAMBA_BASELINE_10_10_NAME = "baseline_10_10"
 GRAPH_MAMBA_BASELINE_10_10_OVERRIDES = {"gt.layers": 10}  # 使用 morphology-node-EX.yaml，不传 --no-mamba
+# BFS 改进：与 10+10 参数完全一致，仅将 Mamba 改为 Mamba_GNNPriorityBFS
+GRAPH_MAMBA_BASELINE_BFS_NAME = "baseline_10_10_gnn_priority_bfs"
+GRAPH_MAMBA_BASELINE_BFS_OVERRIDES = {
+    "gt.layer_type": "CustomGatedGCN+Mamba_GNNPriorityBFS",
+    "gt.layers": 10,
+}  # 其余同 EX（batch 32, dim 96, dropout 0, lr 0.001, wd 0.01, 200 epoch）
+
 # Baseline B：20 层纯 GatedGCN（对齐 A 的超参）
 GRAPH_MAMBA_BASELINE_20_ALIGNED_NAME = "baseline_20_aligned"
 GRAPH_MAMBA_BASELINE_20_ALIGNED_OVERRIDES = {

@@ -82,8 +82,18 @@ def main():
         metavar=("KEY", "VALUE"),
         help="Override cfg key (e.g. gnn.dropout) and value; can be repeated",
     )
+    parser.add_argument(
+        "--baseline",
+        type=str,
+        default=None,
+        choices=("10_10", "20_aligned", "bfs"),
+        help="Apply preset: 10_10 (A), 20_aligned (B), bfs (10+10 with Mamba_GNNPriorityBFS)",
+    )
     args = parser.parse_args()
 
+    # 20_aligned 需 --no-mamba 和 GatedGCN 配置
+    if getattr(args, "baseline", None) == "20_aligned":
+        args.no_mamba = True
     config_rel = CONFIG_GATEDGCN if args.no_mamba else CONFIG_MAMBA
 
     sys.path.insert(0, PROJECT_ROOT)
@@ -119,7 +129,17 @@ def main():
         "dataset.dir", data_dir,
         "wandb.use", args.wandb,
     ]
-    if getattr(args, "name_tag", None):
+    if getattr(args, "baseline", None):
+        preset = {
+            "10_10": (gnn_config.GRAPH_MAMBA_BASELINE_10_10_NAME, gnn_config.GRAPH_MAMBA_BASELINE_10_10_OVERRIDES),
+            "20_aligned": (gnn_config.GRAPH_MAMBA_BASELINE_20_ALIGNED_NAME, gnn_config.GRAPH_MAMBA_BASELINE_20_ALIGNED_OVERRIDES),
+            "bfs": (gnn_config.GRAPH_MAMBA_BASELINE_BFS_NAME, gnn_config.GRAPH_MAMBA_BASELINE_BFS_OVERRIDES),
+        }[args.baseline]
+        name = args.name_tag if getattr(args, "name_tag", None) else preset[0]
+        cmd.extend(["name_tag", name])
+        for k, v in preset[1].items():
+            cmd.extend([k, str(v)])
+    elif getattr(args, "name_tag", None):
         cmd.extend(["name_tag", args.name_tag])
     if getattr(args, "override", None):
         for k, v in args.override:
