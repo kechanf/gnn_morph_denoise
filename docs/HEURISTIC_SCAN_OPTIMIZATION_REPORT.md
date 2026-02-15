@@ -1,6 +1,6 @@
 # 启发式扫描优化开发报告
 
-本文档描述在 **Mamba + GNN** 形态学节点分类中，对图节点进行**启发式扫描排序**的设计思路、实现方式与调用方法，以及可选的**门控融合**组件。
+本文档描述在 **Mamba + GNN** 形态学节点分类中，对图节点进行**启发式扫描排序**的设计思路、实现方式与调用方法。
 
 ---
 
@@ -126,11 +126,6 @@ LexSort 键为 `(batch, dist, -score)`：先按 batch 分组，再按测地距�
   - `is_target_root`：`(node_type == 1).float()`
 - **首次使用需删除 processed 缓存**：`$DATADIR/processed/morphology_processed.pt`，以触发重新预处理并写入 dist/root 字段。
 
-### 3.4 门控融合（可选）
-
-- **ConflictAwareFusion**（`fusion_gating.py`）：`z = concat(h_mamba, h_gnn)`，`gate_logit = gate_net(z)`，`diff = (h_mamba - h_gnn)^2`，`alpha = sigmoid(gate_logit - beta*diff)`，`h_fused = alpha*h_mamba + (1-alpha)*h_gnn`。
-- 配置 `gt.fusion=conflict_aware` 启用；否则仍为 sum，不影响 baseline。
-
 ---
 
 ## 四、调用方法
@@ -143,12 +138,10 @@ LexSort 键为 `(batch, dist, -score)`：先按 batch 分组，再按测地距�
 | gt.layers | GPS 层数（10 = 10+10） | 10 |
 | gt.gnn_priority_aux_weight | 辅助 BCE 权重 | 0.5 |
 | gt.gnn_priority_pe_dim | dist 正弦 PE 维度 | 16 |
-| gt.fusion | sum / conflict_aware | sum |
-| gt.fusion_beta | 门控冲突系数 | 1.0 |
 
 ### 4.2 命令行
 
-#### 4.2.1 使用预设（推荐）
+#### 使用预设（推荐）
 
 ```bash
 # BFS 改进（10+10 + Mamba_GNNPriorityBFS，与 Baseline A 参数一致）
@@ -158,7 +151,7 @@ python scripts/run_graph_mamba.py \
   --baseline bfs
 ```
 
-#### 4.2.2 手动指定
+#### 手动指定
 
 ```bash
 python scripts/run_graph_mamba.py \
@@ -168,7 +161,7 @@ python scripts/run_graph_mamba.py \
   --name_tag baseline_10_10_gnn_priority_bfs
 ```
 
-#### 4.2.3 调整 GNN Priority 参数
+#### 调整 GNN Priority 参数
 
 ```bash
 python scripts/run_graph_mamba.py --data_dir /path/to/synthesis_data \
@@ -177,15 +170,15 @@ python scripts/run_graph_mamba.py --data_dir /path/to/synthesis_data \
   --override gt.gnn_priority_pe_dim 16
 ```
 
-#### 4.2.4 完整示例（本地 out_dir、tiny50 快速测试）
+#### 完整示例（tiny50 快速测试）
 
 ```bash
-export GNN_DATA_ROOT=/home/kfchen/gnn_project_local
+export GNN_DATA_ROOT=/path/to/data_root
 python scripts/run_graph_mamba.py \
-  --data_dir /home/kfchen/gnn_project_local/synthesis_data_tiny_50 \
+  --data_dir /path/to/synthesis_data_tiny_50 \
   --baseline bfs \
   --override optim.max_epoch 3 \
-  --override out_dir /home/kfchen/gnn_project_local/graph_mamba_results
+  --override out_dir /path/to/graph_mamba_results
 ```
 
 ### 4.3 数据要求
@@ -230,4 +223,4 @@ BFS 改进相对 Baseline A 提升约 **+4% Val / +3.8% Test**。
 
 - **思路**：通过启发式扫描（固定 BFS/度 → GNN 引导 Priority BFS / LexSort）使 Mamba 输入序列“树优先、噪声靠后”，用辅助 BCE 训练打分 MLP，并用形态学 dist/root 做 LexSort 与 MLP 输入增强。
 - **实现**：`gps_layer.py` 中按 `global_model_type` 分支；Mamba_GNNPriorityBFS 含 MLP、LexSort/Priority BFS、辅助损失与数据字段的完整链路；BFS 支持不连通图。
-- **调用**：通过 `gt.layer_type`、`gt.gnn_priority_*`、`gt.fusion` 与 `--override` 或 `--baseline bfs` 即可切换 baseline 与 BFS/门控。
+- **调用**：通过 `gt.layer_type`、`gt.gnn_priority_*` 与 `--override` 或 `--baseline bfs` 即可切换 baseline 与 BFS。
