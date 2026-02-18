@@ -200,7 +200,7 @@ python scripts/run_graph_mamba.py \
 
 ## 五、实验结论
 
-### 5.1 全量训练结果（约 8000 图，200 epoch）
+### 5.1 全量训练结果（2000 图，200 epoch）
 
 | 方法 | 最佳 epoch | Val acc | Test acc |
 |------|------------|---------|----------|
