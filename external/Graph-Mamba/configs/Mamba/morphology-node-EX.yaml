@@ -60,7 +60,7 @@ gt:
   # 深度感知 beta：True=浅层 beta 大(信 GNN)、深层 beta 小(信 Mamba)。override: gt.fusion_depth_aware_beta True
   fusion_depth_aware_beta: true
   # 深度感知时 beta 是否可学习。建议先 False 强迫按规则走
-  fusion_learnable_beta: true
+  fusion_learnable_beta: false
   # 门控温度 tau：1.0=不锐化，0.5=更极端。override: gt.fusion_tau 0.5
   fusion_tau: 0.5
   # Mamba_GNNPriorityBFS 时辅助 BCE 监督 scores，使 MLP 学会树/噪声打分。默认 0.5

@@ -64,7 +64,7 @@ def set_cfg_gt(cfg):
     # 深度感知 beta：为 True 时按层用 beta_max(浅)->beta_min(深) 初始化，gate 零初始化
     cfg.gt.fusion_depth_aware_beta = True
     # 深度感知时 beta 是否可学习。建议先 False 跑一把，强迫按规则走
-    cfg.gt.fusion_learnable_beta = True
+    cfg.gt.fusion_learnable_beta = False
     # 门控温度 tau：1.0=不锐化，<1(如0.5) 使 alpha 更极端
     cfg.gt.fusion_tau = 0.5
     # 特征正交约束权重 lambda_ortho（0 表示不使用正交 Loss）
