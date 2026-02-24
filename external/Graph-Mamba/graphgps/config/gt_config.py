@@ -57,6 +57,18 @@ def set_cfg_gt(cfg):
     cfg.gt.fusion_beta = 1.0
     # 为 True 时 gate 零初始化，使初始 alpha ≈ 0.5（两端等权）
     cfg.gt.fusion_gate_init_zero = False
+    # 为 True 时在日志中打印融合门控 alpha 的均值与方差（用于监测）
+    cfg.gt.fusion_log_alpha = False
+    # 为 True 时按层打印 alpha（fusion alpha: layer=L mean=... var=...），便于做层级分布分析
+    cfg.gt.fusion_log_alpha_per_layer = False
+    # 深度感知 beta：为 True 时按层用 beta_max(浅)->beta_min(深) 初始化，gate 零初始化
+    cfg.gt.fusion_depth_aware_beta = True
+    # 深度感知时 beta 是否可学习。建议先 False 跑一把，强迫按规则走
+    cfg.gt.fusion_learnable_beta = True
+    # 门控温度 tau：1.0=不锐化，<1(如0.5) 使 alpha 更极端
+    cfg.gt.fusion_tau = 0.5
+    # 特征正交约束权重 lambda_ortho（0 表示不使用正交 Loss）
+    cfg.gt.fusion_ortho_lambda = 0.0
 
     # Mamba_GNNPriorityBFS: 辅助 BCE loss 权重；dist 正弦编码维度
     cfg.gt.gnn_priority_aux_weight = 0.5

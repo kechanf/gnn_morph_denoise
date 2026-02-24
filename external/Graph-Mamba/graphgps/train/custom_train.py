@@ -136,6 +136,14 @@ def train_epoch(logger, loader, model, optimizer, scheduler, batch_accumulation)
 
         loss = _add_gnn_priority_aux_loss(loss, batch)
 
+        # 特征正交约束：在各层 ConflictAwareFusion 中按节点计算 cosine 相似度，
+        # 在此处按 batch 汇总，再用 cfg.gt.fusion_ortho_lambda 加权加入总 loss。
+        lambda_ortho = getattr(cfg.gt, "fusion_ortho_lambda", 0.0)
+        if lambda_ortho > 0.0 and hasattr(batch, "ortho_losses"):
+            if len(batch.ortho_losses) > 0:
+                loss_ortho = sum(batch.ortho_losses) / len(batch.ortho_losses)
+                loss = loss + lambda_ortho * loss_ortho
+
         if if_flop:
             prof.stop_profile()
             flops = prof.get_total_flops()

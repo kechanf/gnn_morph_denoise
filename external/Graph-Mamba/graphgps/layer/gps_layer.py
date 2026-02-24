@@ -294,10 +294,11 @@ class GPSLayer(nn.Module):
                  local_gnn_type, global_model_type, num_heads,
                  pna_degrees=None, equivstable_pe=False, dropout=0.0,
                  attn_dropout=0.0, layer_norm=False, batch_norm=True,
-                 bigbird_cfg=None):
+                 bigbird_cfg=None, layer_id=0):
         super().__init__()
 
         self.dim_h = dim_h
+        self.layer_id = layer_id
         self.num_heads = num_heads
         self.attn_dropout = attn_dropout
         self.layer_norm = layer_norm
@@ -463,7 +464,19 @@ class GPSLayer(nn.Module):
         if fusion_type == 'conflict_aware':
             beta_init = getattr(cfg.gt, 'fusion_beta', 1.0)
             gate_init_zero = getattr(cfg.gt, 'fusion_gate_init_zero', False)
-            self.fusion_module = ConflictAwareFusion(dim_h, beta=beta_init, gate_init_zero=gate_init_zero)
+            log_alpha = getattr(cfg.gt, 'fusion_log_alpha', False)
+            log_alpha_per_layer = getattr(cfg.gt, 'fusion_log_alpha_per_layer', False)
+            if log_alpha_per_layer:
+                log_alpha = True  # 分层监测开启时自动打印
+            use_depth_aware_beta = getattr(cfg.gt, 'fusion_depth_aware_beta', False)
+            learnable_beta = getattr(cfg.gt, 'fusion_learnable_beta', True)
+            tau = getattr(cfg.gt, 'fusion_tau', 1.0)
+            num_layers = getattr(cfg.gt, 'layers', 10)
+            self.fusion_module = ConflictAwareFusion(
+                dim_h, beta=beta_init, gate_init_zero=gate_init_zero,
+                log_alpha=log_alpha, log_alpha_per_layer=log_alpha_per_layer, layer_id=self.layer_id,
+                layer_idx=self.layer_id, num_layers=num_layers, use_depth_aware_beta=use_depth_aware_beta,
+                learnable_beta=learnable_beta, tau=tau)
         else:
             self.fusion_module = None
 
@@ -1000,6 +1013,13 @@ class GPSLayer(nn.Module):
         if self.fusion_module is not None and len(h_out_list) == 2:
             # h_out_list[0] = h_local (GNN), h_out_list[1] = h_attn (Mamba)
             h = self.fusion_module(h_out_list[1], h_out_list[0])
+            # 若启用了特征正交约束，fusion_module 会在 forward 中更新 last_ortho_loss。
+            # 将各层的 ortho_loss 收集到 batch 上，供 train loop 汇总。
+            ortho_loss = getattr(self.fusion_module, "last_ortho_loss", None)
+            if ortho_loss is not None:
+                if not hasattr(batch, "ortho_losses"):
+                    batch.ortho_losses = []
+                batch.ortho_losses.append(ortho_loss)
         else:
             h = sum(h_out_list)
 

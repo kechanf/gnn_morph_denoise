@@ -15,10 +15,13 @@
 
 set -euo pipefail
 
+ENV_NAME="${ENV_NAME:-graph-mamba}"
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${PROJECT_ROOT}"
 
-ENV_NAME="${ENV_NAME:-graph-mamba}"
+# 数据目录：默认使用本地 full 数据
+DATA_DIR_DEFAULT="/home/kfchen/gnn_project_local/synthesis_data"
+DATA_DIR="${DATA_DIR:-${DATA_DIR_DEFAULT}}"
 
 BETAS=(0.1 1.0 10.0)
 # init_flag = True 表示 gate_init_zero=True（等权起步），False 表示随机起步
@@ -27,6 +30,7 @@ INIT_FLAGS=(True False)
 echo "=== 门控参数扫描：beta ∈ {0.1, 1.0, 10.0}, gate_init_zero ∈ {True, False} ==="
 echo "  项目根目录: ${PROJECT_ROOT}"
 echo "  Conda 环境: ${ENV_NAME}"
+echo "  数据目录:   ${DATA_DIR}"
 echo ""
 
 for beta in "${BETAS[@]}"; do
@@ -44,6 +48,7 @@ for beta in "${BETAS[@]}"; do
     echo "----------------------------------------------------------------"
 
     conda run -n "${ENV_NAME}" python scripts/run_graph_mamba.py \
+      --data_dir "${DATA_DIR}" \
       --wandb False \
       --baseline bfs \
       --repeat 1 \
