@@ -100,9 +100,9 @@ python scripts/run_graph_mamba.py \
 
 | 指标 | 值 |
 |------|-----|
-| 最佳 epoch | 40 |
-| Val acc | 85.87% |
-| Test acc | 84.73% |
+| 最佳 epoch | 38 |
+| Val acc | 85.91% |
+| Test acc | 85.41% |
 
 ---
 
@@ -136,9 +136,9 @@ python scripts/run_graph_mamba.py \
 
 | 指标 | 值 |
 |------|-----|
-| 最佳 epoch | 43 |
-| Val acc | 88.21% |
-| Test acc | 88.14% |
+| 最佳 epoch | 41 |
+| Val acc | 88.53% |
+| Test acc | 88.28% |
 
 ---
 
@@ -181,11 +181,11 @@ python scripts/run_graph_mamba.py \
 
 | 指标 | 值 |
 |------|-----|
-| 最佳 epoch | 66 |
-| Val acc | 91.62% |
-| Test acc | 91.80% |
+| 最佳 epoch | 73 |
+| Val acc | 90.51% |
+| Test acc | 90.60% |
 
-相对 Baseline A 约 **+3.4% Val / +3.7% Test**。详见 `docs/HEURISTIC_SCAN_OPTIMIZATION_REPORT.md`。
+相对 Baseline A 约 **+2.0% Val / +2.3% Test**。详见 `docs/HEURISTIC_SCAN_OPTIMIZATION_REPORT.md`。
 
 ---
 
@@ -218,8 +218,8 @@ python scripts/run_graph_mamba.py \
 
 | 指标 | 值 |
 |------|-----|
-| Val acc | ≈ 88.9% |
-| Test acc | ≈ 88.6% |
+| Val acc | 88.99% |
+| Test acc | 88.75% |
 
 与 Baseline A 同量级或略高。详见 `docs/GATING_OPTIMIZATION_REPORT.md`、`docs/门控融合开发报告.md`。
 
@@ -262,11 +262,11 @@ python scripts/run_graph_mamba.py \
 
 | 指标 | 值 |
 |------|-----|
-| 最佳 epoch | 80 |
-| Val acc | 91.78% |
-| Test acc | 91.35% |
+| 最佳 epoch | 68 |
+| Val acc | 91.66% |
+| Test acc | 91.19% |
 
-相对 Baseline A 约 **+3.6% Val / +3.2% Test**；与单独 BFS 处于同一水平带，门控在 BFS 之上为小幅增强。详见 `docs/COMBINED_OPTIMIZATION_DEV_PLAN.md` 及组合实验记录。
+相对 Baseline A 约 **+3.1% Val / +2.9% Test**；与单独 BFS 处于同一水平带，门控在 BFS 之上为小幅增强。详见 `docs/COMBINED_OPTIMIZATION_DEV_PLAN.md` 及组合实验记录。
 
 ---
 
@@ -274,11 +274,11 @@ python scripts/run_graph_mamba.py \
 
 | 模型 | 结构要点 | 训练命令概要 | Val acc | Test acc |
 |------|----------|--------------|---------|----------|
-| 纯 GNN Baseline | 20 层 GatedGCN，无 Mamba | `--baseline 20_aligned` | 85.87% | 84.73% |
-| Mamba Baseline | 10+10，sum 融合 | `--baseline 10_10` | 88.21% | 88.14% |
-| BFS 优化 | 10+10，Mamba_GNNPriorityBFS，sum | `--baseline bfs` | 91.62% | 91.80% |
-| 门控优化 | 10+10，conflict_aware 融合 | `--override gt.fusion conflict_aware` 等 | ≈88.9% | ≈88.6% |
-| BFS+门控 | 10+10，BFS + conflict_aware | 同上，并 `gt.layer_type` BFS + `gt.fusion conflict_aware` | 91.78% | 91.35% |
+| 纯 GNN Baseline | 20 层 GatedGCN，无 Mamba | `--baseline 20_aligned` | 85.91% | 85.41% |
+| Mamba Baseline | 10+10，sum 融合 | `--baseline 10_10` | 88.53% | 88.28% |
+| BFS 优化 | 10+10，Mamba_GNNPriorityBFS，sum | `--baseline bfs` | 90.51% | 90.60% |
+| 门控优化 | 10+10，conflict_aware 融合 | `--override gt.fusion conflict_aware` 等 | 88.99% | 88.75% |
+| BFS+门控 | 10+10，BFS + conflict_aware | 同上，并 `gt.layer_type` BFS + `gt.fusion conflict_aware` | 91.66% | 91.19% |
 
 ---
 
