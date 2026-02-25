@@ -52,6 +52,15 @@ def subsample_batch_index(batch, min_k = 1, ratio = 0.1):
     return idx
 
 
+def _safe_logits(pred):
+    """数值保护：避免 nan/inf 或过大 logits 导致 log_softmax 溢出、loss 为 nan。"""
+    if pred is None:
+        return pred
+    pred = torch.nan_to_num(pred, nan=0.0, posinf=50.0, neginf=-50.0)
+    pred = torch.clamp(pred, min=-50.0, max=50.0)
+    return pred
+
+
 def arxiv_cross_entropy(pred, true, split_idx):
     true = true.squeeze(-1)
     if pred.ndim > 1 and true.ndim == 1:
@@ -83,6 +92,11 @@ def _add_gnn_priority_aux_loss(loss, batch):
     if scores.shape[0] != labels.shape[0]:
         min_len = min(scores.shape[0], labels.shape[0])
         scores, labels = scores[:min_len], labels[:min_len]
+    # 数值稳健性保护：保证 BCE 输入在 [0, 1] 范围内，并清理 NaN
+    labels = labels.clamp(0.0, 1.0)
+    labels = torch.nan_to_num(labels, nan=0.0)
+    scores = scores.clamp(1e-6, 1.0 - 1e-6)
+    scores = torch.nan_to_num(scores, nan=0.5)
     loss_aux = F.binary_cross_entropy(scores, labels, reduction='mean')
     return loss + aux_weight * loss_aux
 
@@ -120,6 +134,7 @@ def train_epoch(logger, loader, model, optimizer, scheduler, batch_accumulation)
         batch.to(_device())
         
         pred, true = model(batch)
+        pred = _safe_logits(pred)
         if cfg.dataset.name == 'ogbg-code2':
             loss, pred_score = subtoken_cross_entropy(pred, true)
             _true = true
@@ -201,6 +216,7 @@ def eval_epoch(logger, loader, model, split='val'):
         else:
             pred, true = model(batch)
             extra_stats = {}
+        pred = _safe_logits(pred)
         if cfg.dataset.name == 'ogbg-code2':
             loss, pred_score = subtoken_cross_entropy(pred, true)
             _true = true

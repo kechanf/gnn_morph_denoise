@@ -376,7 +376,10 @@ class GPSLayer(nn.Module):
                 )
             if global_model_type == 'Mamba_GNNPriorityBFS':
                 # GNN-guided priority serialization: MLP 输入增强 (h_local + sinusoidal(dist) + is_root)
-                self.self_attn = Mamba(d_model=dim_h, d_state=16, d_conv=4, expand=1)
+                self.self_attn = Mamba(
+                    d_model=dim_h, d_state=16, d_conv=4, expand=1,
+                    dt_min=0.001, dt_max=0.1, dt_init_floor=1e-4,
+                )
                 pe_dim = getattr(cfg.gt, 'gnn_priority_pe_dim', 16)
                 self.gnn_priority_pe_dim = pe_dim
                 dim_mlp_in = dim_h + pe_dim + 1  # h_local + radial PE + is_target_root
@@ -387,42 +390,36 @@ class GPSLayer(nn.Module):
                     nn.Linear(dim_h, 1),
                 )
             elif global_model_type.split('_')[-1] == '2':
-                self.self_attn = Mamba(d_model=dim_h, # Model dimension d_model
-                        d_state=8,  # SSM state expansion factor
-                        d_conv=4,    # Local convolution width
-                        expand=2,    # Block expansion factor
+                self.self_attn = Mamba(
+                        d_model=dim_h, d_state=8, d_conv=4, expand=2,
+                        dt_min=0.001, dt_max=0.1, dt_init_floor=1e-4,
                     )
             elif global_model_type.split('_')[-1] == '4':
-                self.self_attn = Mamba(d_model=dim_h, # Model dimension d_model
-                        d_state=4,  # SSM state expansion factor
-                        d_conv=4,    # Local convolution width
-                        expand=4,    # Block expansion factor
+                self.self_attn = Mamba(
+                        d_model=dim_h, d_state=4, d_conv=4, expand=4,
+                        dt_min=0.001, dt_max=0.1, dt_init_floor=1e-4,
                     )
             elif global_model_type.split('_')[-1] == 'Multi':
                 self.self_attn = []
                 for i in range(4):
-                    self.self_attn.append(Mamba(d_model=dim_h, # Model dimension d_model
-                    d_state=16,  # SSM state expansion factor
-                    d_conv=4,    # Local convolution width
-                    expand=1,    # Block expansion factor
+                    self.self_attn.append(Mamba(
+                        d_model=dim_h, d_state=16, d_conv=4, expand=1,
+                        dt_min=0.001, dt_max=0.1, dt_init_floor=1e-4,
                     ))
             elif global_model_type.split('_')[-1] == 'SmallConv':
-                self.self_attn = Mamba(d_model=dim_h, # Model dimension d_model
-                        d_state=16,  # SSM state expansion factor
-                        d_conv=2,    # Local convolution width
-                        expand=1,    # Block expansion factor
+                self.self_attn = Mamba(
+                        d_model=dim_h, d_state=16, d_conv=2, expand=1,
+                        dt_min=0.001, dt_max=0.1, dt_init_floor=1e-4,
                     )
             elif global_model_type.split('_')[-1] == 'SmallState':
-                self.self_attn = Mamba(d_model=dim_h, # Model dimension d_model
-                        d_state=8,  # SSM state expansion factor
-                        d_conv=4,    # Local convolution width
-                        expand=1,    # Block expansion factor
+                self.self_attn = Mamba(
+                        d_model=dim_h, d_state=8, d_conv=4, expand=1,
+                        dt_min=0.001, dt_max=0.1, dt_init_floor=1e-4,
                     )
             else:
-                self.self_attn = Mamba(d_model=dim_h, # Model dimension d_model
-                        d_state=16,  # SSM state expansion factor
-                        d_conv=4,    # Local convolution width
-                        expand=1,    # Block expansion factor
+                self.self_attn = Mamba(
+                        d_model=dim_h, d_state=16, d_conv=4, expand=1,
+                        dt_min=0.001, dt_max=0.1, dt_init_floor=1e-4,
                     )
         else:
             raise ValueError(f"Unsupported global x-former model: "

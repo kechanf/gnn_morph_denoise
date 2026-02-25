@@ -72,16 +72,18 @@ python scripts/run_graph_mamba.py \
 | Baseline | 最佳 epoch | Val acc | Test acc |
 |----------|------------|---------|----------|
 | A (10+10) | 43 | 88.21% | 88.14% |
+| BFS（Mamba_GNNPriorityBFS） | 66 | 91.62% | 91.80% |
 | B (20 层对齐) | 40 | 85.87% | 84.73% |
 
-详见 `config.py` 中 `GRAPH_MAMBA_BASELINE_*` 常量。`--baseline bfs` 对应 `GRAPH_MAMBA_BASELINE_BFS_*`。
+详见 `config.py` 中 `GRAPH_MAMBA_BASELINE_*` 常量。`--baseline bfs` 对应 `GRAPH_MAMBA_BASELINE_BFS_*`。BFS 结果见 `docs/HEURISTIC_SCAN_OPTIMIZATION_REPORT.md`（含辅助损失数值稳健性说明）。
 
 ### 可选：门控融合（Conflict-Aware Gating）
 
 在 Baseline A（EX）上可启用逐维门控融合，替代默认的 `h = sum(h_local, h_attn)`：
 
 - **配置**：`gt.fusion=conflict_aware`，`gt.fusion_beta`（默认 1.0），可选 `gt.fusion_gate_init_zero=True` 使初始 α≈0.5。
-- **实现**：`external/Graph-Mamba/graphgps/layer/fusion_gating.py`（ConflictAwareFusion），在 `gps_layer.py` 中按配置分支调用；未启用时仍为 `sum`，不影响 baseline。
+- **实现**：`external/Graph-Mamba/graphgps/layer/fusion_gating.py`（ConflictAwareFusion），门控核为**单层** `Linear(2*dim→dim)`；在 `gps_layer.py` 中按配置分支调用；未启用时仍为 `sum`，不影响 baseline。
+- **完整记录**：门控设计、深度感知 β、温度 tau、以及 gate 结构尝试与回退见 `docs/门控融合开发报告.md` 与 `docs/GATING_OPTIMIZATION_REPORT.md`。
 - **运行示例**（完整数据、结果落本地）：
   ```bash
   GNN_DATA_ROOT=/path/to/your/data_root python scripts/run_graph_mamba.py \

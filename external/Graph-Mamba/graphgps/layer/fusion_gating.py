@@ -54,11 +54,12 @@ class ConflictAwareFusion(nn.Module):
         # 最近一次 forward 的特征正交 loss（用于在 train loop 中汇总）
         self.last_ortho_loss: Optional[torch.Tensor] = None
 
+        # gate_net: 单层 Linear(2*dim -> dim) 逐维门控
         self.gate_net = nn.Linear(dim * 2, dim)
 
         init_beta_value = float(beta)
         if use_depth_aware_beta and layer_idx is not None and num_layers is not None:
-            # 深度感知：gate 零初始化，beta 按层从大到小
+            # 深度感知：gate 零初始化（单层 Linear），beta 按层从大到小
             nn.init.zeros_(self.gate_net.weight)
             nn.init.zeros_(self.gate_net.bias)
             init_beta = _depth_aware_beta(layer_idx, num_layers)
@@ -100,7 +101,7 @@ class ConflictAwareFusion(nn.Module):
         cos_sim = F.cosine_similarity(h_mamba, h_gnn, dim=-1, eps=1e-8)
         self.last_ortho_loss = cos_sim.abs().mean()
 
-        # 1. 门控主分支
+        # 1. 门控主分支（直接基于当前特征做门控）
         z = torch.cat([h_mamba, h_gnn], dim=-1)
         gate_logit = self.gate_net(z)
         beta_safe = self.beta.abs()

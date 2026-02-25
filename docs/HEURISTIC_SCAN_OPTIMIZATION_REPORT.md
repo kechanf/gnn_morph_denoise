@@ -118,6 +118,7 @@ LexSort 键为 `(batch, dist, -score)`：先按 batch 分组，再按测地距�
 - 条件：`layer_type` 含 `Mamba_GNNPriorityBFS` 且 batch 有 `gnn_priority_scores` 和 `y`。
 - `loss_total = loss + gnn_priority_aux_weight * BCE(scores, labels)`
 - labels 为节点 0/1 标签（1=目标树，0=噪声）。
+- **数值稳健性**（长训 200 epoch 必开）：在送入 BCE 前对 `labels` 做 `clamp(0, 1)`，对 `scores` 做 `clamp(1e-6, 1-1e-6)`，并对两者做 `torch.nan_to_num`，避免 CUDA 断言 `input_val >= zero && input_val <= one` 导致训练中断。实现见 `custom_train.py` 中 `_add_gnn_priority_aux_loss`。
 
 #### 3.3.7 数据侧
 
@@ -204,17 +205,17 @@ python scripts/run_graph_mamba.py \
 
 | 方法 | 最佳 epoch | Val acc | Test acc |
 |------|------------|---------|----------|
-| **BFS 改进（Mamba_GNNPriorityBFS）** | **74** | **92.16%** | **91.95%** |
+| **BFS 改进（Mamba_GNNPriorityBFS）** | **66** | **91.62%** | **91.80%** |
 | Baseline A（10+10） | 43 | 88.21% | 88.14% |
 | Baseline B（20 层对齐） | 40 | 85.87% | 84.73% |
 
-BFS 改进相对 Baseline A 提升约 **+4% Val / +3.8% Test**。
+BFS 改进相对 Baseline A 提升约 **+3.4% Val / +3.7% Test**。上述 BFS 结果为带辅助损失 clamp+nan_to_num 的 200 epoch 完整跑（name_tag: bfs_full_200epoch_nanfix）。
 
 ### 5.2 实现要点总结
 
-- **LexSort 路径**：有 dist 时使用，GPU 向量化，避免 CPU 瓶颈。
+- **LexSort 路径**：有 dist 时使用，GPU 向量化，避免 CPU 瓶颈；建议删除 `$DATADIR/processed/morphology_processed.pt` 以触发带 dist/root 的预处理，确保走 LexSort 而非 Python BFS。
 - **BFS 不连通处理**：未访问节点按 score 降序排在末尾，保证 perm 覆盖全部节点。
-- **辅助损失**：使 MLP 学会预测树/噪声，弥补 BFS/LexSort 不可导。
+- **辅助损失**：使 MLP 学会预测树/噪声，弥补 BFS/LexSort 不可导；长训时需对 scores/labels 做 clamp 与 nan_to_num，避免 BCE 触发 CUDA 断言。
 - **数据预处理**：dist_from_root、is_target_root 需在 MorphologyNode 中正确构造并清缓存。
 
 ---

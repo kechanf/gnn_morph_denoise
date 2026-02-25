@@ -202,3 +202,12 @@ h_fused = fusion(h_mamba, h_gnn)  # h_mamba, h_gnn: [N, 96]
 - **思路**：用逐维冲突 (H_Mamba−H_GNN)² 调制可学习门控，在 Logit 上做偏置，得到 α = Sigmoid(gate_logit − β·Δ_diff)，再做凸组合融合，冲突大时偏 GNN。
 - **实现**：独立模块 `ConflictAwareFusion`，通过 `gt.fusion` 在 GPSLayer 中可选接入；默认 `fusion=sum` 时行为与原有两种 baseline 完全一致。
 - **调用**：YAML 中设置 `gt.fusion` / `gt.fusion_beta` / `gt.fusion_gate_init_zero`，或通过 `--override gt.fusion conflict_aware` 等命令行参数启用。
+
+---
+
+## 8. Gate structure variants (tried and reverted)
+
+The current **gate_net** is a single **Linear(2*dim, dim)** as in §3.1. Two variants were tried and reverted:
+
+- **Two-layer MLP** (2*dim → dim/2 → dim): In experiments such as `bfs_gating_depth_tau0.5_mlp`, Val/Test degraded (e.g. val_loss ↑, test_acc ↓) and overfitting increased; reverted. **Do not use** this variant.
+- **ReLU + Linear + ReLU**: Reverted by request; no full comparison. Current code uses **single Linear only**.
